@@ -1,7 +1,8 @@
 package main
 
 type Item struct {
-	name string
-	value float64
+	id     int32
+	name   string
+	value  float64
 	amount int32
 }
