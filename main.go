@@ -6,9 +6,38 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"database/sql"
+	_ "github.com/lib/pq"
 )
 
-func main() {
+const (
+	host     = "localhost"
+	port     = 5432
+	user     = "postgres"
+	password = "1234"
+	dbname   = "test"
+)
+
+var(
+    db *sql.DB
+)
+
+func main() {	
+	var err error
+	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
+		"password=%s dbname=%s sslmode=disable",
+		host, port, user, password, dbname)
+	db, err = sql.Open("postgres", psqlInfo)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	err = db.Ping()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Successfully connected!")
 	handleRequests()
 }
 
@@ -26,14 +55,17 @@ func handleRequests() {
 func homePage(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Welcome to the HomePage!")
 	fmt.Println("Endpoint Hit: homePage")
-	getCart()
-	getItem()
-	getAllCart()
 }
 
-func test(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "TESTPage!")
-	fmt.Println("Endpoint Hit: homePage")
+func listItems(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Endpoint Hit: list items")
+	items, err := listDbItems(db)
+	if err != nil {
+		handlerError(w, err)
+	} else {
+		fmt.Fprintf(w, "%+v", items)
+	}
+
 }
 
 func createcart(w http.ResponseWriter, r *http.Request) {
@@ -44,8 +76,11 @@ func createcart(w http.ResponseWriter, r *http.Request) {
 	} else {
 		var createdCart Cart
 		json.Unmarshal(reqBody, &createdCart)
-
-		fmt.Fprintf(w, "%+v", createdCart)
+		newCart, err := createCartDb(createdCart, db)
+		if err != nil{
+			handlerError(w, err)
+		}
+		fmt.Fprintf(w, "%+v", newCart)
 		fmt.Println("Endpoint Hit: create cart")
 	}
 
@@ -53,22 +88,22 @@ func createcart(w http.ResponseWriter, r *http.Request) {
 
 func addItem(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "add Item!")
-	reqBody, error := ioutil.ReadAll(r.Body)
-	if error != nil {
-		handlerError(w, error)
+	reqBody, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		handlerError(w, err)
 	} else {
-		var newItem Item
-		json.Unmarshal(reqBody, &newItem)
+		var newItem CreateItem
+		err = json.Unmarshal(reqBody, &newItem, )
 
-		fmt.Fprintf(w, "%+v", newItem)
+		response, errInsert := addItemToCart(newItem,db)
+		if errInsert != nil{
+			handlerError(w, errInsert)
+		}
+
+		fmt.Fprintf(w, "%+v", response)
 		fmt.Println("Endpoint Hit: add item")
 	}
 
-}
-
-func listItems(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "List items")
-	fmt.Println("Endpoint Hit: list items")
 }
 
 func modifyItems(w http.ResponseWriter, r *http.Request) {
@@ -115,5 +150,5 @@ func removeAll(w http.ResponseWriter, r *http.Request) {
 
 func handlerError(w http.ResponseWriter, err error) {
 	fmt.Println("Error parsing", err)
-	fmt.Fprintf(w, "%+v", "bad request")
+	fmt.Fprintf(w, "%+v", err)
 }
