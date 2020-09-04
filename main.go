@@ -1,12 +1,13 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"database/sql"
+
 	_ "github.com/lib/pq"
 )
 
@@ -18,11 +19,11 @@ const (
 	dbname   = "test"
 )
 
-var(
-    db *sql.DB
+var (
+	db *sql.DB
 )
 
-func main() {	
+func main() {
 	var err error
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
 		"password=%s dbname=%s sslmode=disable",
@@ -77,7 +78,7 @@ func createcart(w http.ResponseWriter, r *http.Request) {
 		var createdCart Cart
 		json.Unmarshal(reqBody, &createdCart)
 		newCart, err := createCartDb(createdCart, db)
-		if err != nil{
+		if err != nil {
 			handlerError(w, err)
 		}
 		fmt.Fprintf(w, "%+v", newCart)
@@ -93,10 +94,14 @@ func addItem(w http.ResponseWriter, r *http.Request) {
 		handlerError(w, err)
 	} else {
 		var newItem CreateItem
-		err = json.Unmarshal(reqBody, &newItem, )
+		err = json.Unmarshal(reqBody, &newItem)
+		if err != nil {
+			fmt.Println("Error Unmarshal json")
+		}
+		fmt.Printf("%+v", newItem)
 
-		response, errInsert := addItemToCart(newItem,db)
-		if errInsert != nil{
+		response, errInsert := addItemToCart(newItem, db)
+		if errInsert != nil {
 			handlerError(w, errInsert)
 		}
 
@@ -112,7 +117,7 @@ func modifyItems(w http.ResponseWriter, r *http.Request) {
 	if error != nil {
 		handlerError(w, error)
 	} else {
-		var cartToModify Cart
+		var cartToModify CreateItem
 		json.Unmarshal(reqBody, &cartToModify)
 
 		fmt.Fprintf(w, "%+v", cartToModify)
