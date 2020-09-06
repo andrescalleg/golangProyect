@@ -3,17 +3,18 @@ package main
 import (
 	"database/sql"
 	"fmt"
+
 	_ "github.com/lib/pq"
 )
 
-func getAllCart(db *sql.DB) {
+func getAllCart(db *sql.DB, cartID int) (Cart, error) {
 	sqlStatement := fmt.Sprintf(`
 		SELECT 
-		cart.cart_id, cart.user_name, cart_items.item_amount, item.item_id, item.item_name, item.item_value 
-		FROM 
+		cart.cart_id, cart.user_name, item.item_id, item.item_name, item.item_value 
+		FROM 	
 		cart_items, cart, item 
 		WHERE 
-		cart.cart_id = %d AND cart_items.cart_id = cart.cart_id AND item.item_id = cart_items.item_id;`, 1)
+		cart.cart_id = %d AND cart_items.cart_id = cart.cart_id AND item.item_id = cart_items.item_id;`, cartID)
 	fmt.Println(sqlStatement)
 
 	var item Item
@@ -28,6 +29,7 @@ func getAllCart(db *sql.DB) {
 	default:
 		fmt.Println(err)
 	}
+	return cart, nil
 
 }
 
@@ -101,6 +103,34 @@ func findCart(cartID int, db *sql.DB) (Cart, error) {
 	row := db.QueryRow(sqlStatement)
 	err := row.Scan(&cart.id, &cart.UserName)
 	return cart, err
+
+}
+
+func modifyItem(newItem CreateItem, db *sql.DB) (Item, error) {
+	var item Item
+	cart, err := findCart(newItem.CartID, db)
+	if err != nil {
+		fmt.Println(err)
+		return item, err
+	}
+	if cart.UserName == "" {
+		fmt.Println("No cart to add item")
+		return item, err
+	}
+	sqlStatement := fmt.Sprintf(`
+	UPDATE public.cart_items
+	SET item_amount= %d
+	WHERE item_id= %d AND  cart_id=%d;
+		`, newItem.Amount, newItem.ID, newItem.CartID)
+	fmt.Println(sqlStatement)
+
+	_, err = db.Exec(sqlStatement)
+	if err != nil {
+		fmt.Println(err)
+		return item, err
+	}
+
+	return item, nil
 
 }
 

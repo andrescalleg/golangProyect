@@ -50,12 +50,31 @@ func handleRequests() {
 	http.HandleFunc("/modifyitem", modifyItems)
 	http.HandleFunc("/removeitem", removeItems)
 	http.HandleFunc("/removeall", removeAll)
+	http.HandleFunc("/getCart", getCart)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
 func homePage(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Welcome to the HomePage!")
 	fmt.Println("Endpoint Hit: homePage")
+}
+
+func getCart(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Endpoint Hit: read cart")
+	reqBody, error := ioutil.ReadAll(r.Body)
+	if error != nil {
+		handlerError(w, error)
+	} 
+	var cart int
+	json.Unmarshal(reqBody, &cart)
+	fmt.Println("id: ", cart)
+	completeCart, err := getAllCart(db, cart)
+	if err != nil {
+		handlerError(w, err)
+	} else {
+		fmt.Fprintf(w, "%+v", completeCart)
+	}
+
 }
 
 func listItems(w http.ResponseWriter, r *http.Request) {
@@ -112,16 +131,25 @@ func addItem(w http.ResponseWriter, r *http.Request) {
 }
 
 func modifyItems(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "modify items")
-	reqBody, error := ioutil.ReadAll(r.Body)
-	if error != nil {
-		handlerError(w, error)
+	fmt.Fprintf(w, "modify Item!")
+	reqBody, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		handlerError(w, err)
 	} else {
-		var cartToModify CreateItem
-		json.Unmarshal(reqBody, &cartToModify)
+		var newItem CreateItem
+		err = json.Unmarshal(reqBody, &newItem)
+		if err != nil {
+			fmt.Println("Error Unmarshal json")
+		}
+		fmt.Printf("%+v", newItem)
 
-		fmt.Fprintf(w, "%+v", cartToModify)
-		fmt.Println("Endpoint Hit: modify items")
+		response, errInsert := modifyItem(newItem, db)
+		if errInsert != nil {
+			handlerError(w, errInsert)
+		}
+
+		fmt.Fprintf(w, "%+v", response)
+		fmt.Println("Endpoint Hit: modify item")
 	}
 }
 
