@@ -106,6 +106,32 @@ func findCart(cartID int, db *sql.DB) (Cart, error) {
 
 }
 
+func deleteItem(deleteItem CreateItem, db *sql.DB) (Item, error) {
+	var item Item
+	cart, err := findCart(deleteItem.CartID, db)
+	if err != nil {
+		fmt.Println(err)
+		return item, err
+	}
+	if cart.UserName == "" {
+		fmt.Println("No cart to delete item")
+		return item, err
+	}
+	sqlStatement := fmt.Sprintf(`
+	DELETE FROM public.cart_items
+	WHERE item_id= %d AND  cart_id=%d;
+		`,deleteItem.ID, deleteItem.CartID)
+	fmt.Println(sqlStatement)
+
+	_, err = db.Exec(sqlStatement)
+	if err != nil {
+		fmt.Println(err)
+		return item, err
+	}
+	return item, nil
+
+}
+
 func modifyItem(newItem CreateItem, db *sql.DB) (Item, error) {
 	var item Item
 	cart, err := findCart(newItem.CartID, db)
@@ -171,4 +197,19 @@ func addItemToCart(newItem CreateItem, db *sql.DB) (Item, error) {
 		return item, err
 	}
 	return item, nil
+}
+
+func deleteAllCart(db *sql.DB, cartID int) (error) {
+	sqlStatement := fmt.Sprintf(`
+	DELETE FROM public.cart_items
+	WHERE cart_id = %d;`, cartID)
+	fmt.Println(sqlStatement)
+
+	_, err := db.Exec(sqlStatement)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	return nil
+
 }

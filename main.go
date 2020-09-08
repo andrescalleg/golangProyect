@@ -154,30 +154,40 @@ func modifyItems(w http.ResponseWriter, r *http.Request) {
 }
 
 func removeItems(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "remove items")
-	reqBody, error := ioutil.ReadAll(r.Body)
-	if error != nil {
-		handlerError(w, error)
+	fmt.Fprintf(w, "delete Item!")
+	reqBody, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		handlerError(w, err)
 	} else {
-		var removeItem Item
-		json.Unmarshal(reqBody, &removeItem)
+		var deleteToItem CreateItem
+		err = json.Unmarshal(reqBody, &deleteToItem)
+		if err != nil {
+			fmt.Println("Error Unmarshal json")
+		}
+		fmt.Printf("%+v", deleteToItem)
 
-		fmt.Fprintf(w, "%+v", removeItem)
-		fmt.Println("Endpoint Hit: remove items")
+		response, errInsert := deleteItem(deleteToItem, db)
+		if errInsert != nil {
+			handlerError(w, errInsert)
+		}
+
+		fmt.Fprintf(w, "%+v", response)
+		fmt.Println("Endpoint Hit: delete item")
 	}
 }
 
 func removeAll(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Remove all")
+	fmt.Println("Endpoint Hit: delete all cart")
 	reqBody, error := ioutil.ReadAll(r.Body)
 	if error != nil {
 		handlerError(w, error)
-	} else {
-		var createdCart Cart
-		json.Unmarshal(reqBody, &createdCart)
-
-		fmt.Fprintf(w, "%+v", createdCart)
-		fmt.Println("Endpoint Hit: remove all")
+	} 
+	var cart int
+	json.Unmarshal(reqBody, &cart)
+	fmt.Println("id: ", cart)
+	err := deleteAllCart(db, cart)
+	if err != nil {
+		handlerError(w, err)
 	}
 }
 
